@@ -290,8 +290,47 @@ def best_size(sizes, means):
     best_idx = np.argmin(means)
     return sizes[best_idx]
 
-# Step 9 - one_se_rule (not yet solved)
-# TODO: implement
+# Step 9 - one_se_rule
+import numpy as np
+
+
+def one_se_rule(values, means, ses, prefer="smaller"):
+    values = np.asarray(values)
+    means = np.asarray(means)
+    ses = np.asarray(ses)
+
+    # Locate minimum mean and calculate the 1-SE threshold
+    best_idx = np.argmin(means)
+    threshold = means[best_idx] + ses[best_idx]
+
+    # Filter candidate values whose mean error is within 1 SE of the minimum
+    valid_mask = means <= threshold
+    candidates = values[valid_mask]
+
+    # Select the simplest (smallest) or most expressive (largest) candidate
+    if prefer == "smaller":
+        return np.min(candidates)
+    elif prefer == "larger":
+        return np.max(candidates)
+    else:
+        raise ValueError("prefer must be either 'smaller' or 'larger'")
+
+
+def choose_subset(X, y, direction, cv):
+    # 1. Generate feature selection path
+    path = stepwise_path(X, y, direction=direction, cv=cv)
+
+    # 2. Score each subset size along the path
+    sizes, means, ses = score_path(X, y, path, cv=cv)
+
+    # 3. Find minimum MSE size and 1-SE rule size
+    size_min = best_size(sizes, means)
+    size_1se = one_se_rule(sizes, means, ses, prefer="smaller")
+
+    # 4. Retrieve features for the chosen 1-SE model size
+    features_1se = path[size_1se]
+
+    return size_min, size_1se, features_1se
 
 # Step 10 - ridge_path (not yet solved)
 # TODO: implement
