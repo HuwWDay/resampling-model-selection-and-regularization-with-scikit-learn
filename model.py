@@ -33,8 +33,59 @@ def train_test(X, y, test_size=0.25, random_state=0):
     # TODO: train_test_split; return (X_train, X_test, y_train, y_test)
     return train_test_split(X, y, test_size=test_size, random_state=random_state)
 
-# Step 3 - validation_set_curve (not yet solved)
-# TODO: implement
+# Step 3 - validation_set_curve
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import PolynomialFeatures
+
+
+def poly_model(degree):
+    # Pipeline that creates polynomial terms, then fits standard linear regression
+    return make_pipeline(PolynomialFeatures(degree=degree), LinearRegression())
+
+
+def validation_set_curve(X, y, feature, degrees, random_state):
+    # Select feature as a 2D DataFrame/array slice
+    X_feat = X[[feature]]
+
+    # 50/50 train-validation split
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_feat, y, test_size=0.5, random_state=random_state
+    )
+
+    curve = {}
+    for d in degrees:
+        model = poly_model(d)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_val)
+        mse = mean_squared_error(y_val, y_pred)
+        curve[d] = round(float(mse), 1)
+
+    return curve
+
+
+def curve_spread(X, y, feature, degrees, seeds):
+    # Collect MSEs across seeds for each degree
+    # Structure: {degree: [mse_seed1, mse_seed2, ...]}
+    degree_mses = {d: [] for d in degrees}
+
+    for seed in seeds:
+        seed_curve = validation_set_curve(
+            X, y, feature, degrees, random_state=seed
+        )
+        for d in degrees:
+            degree_mses[d].append(seed_curve[d])
+
+    # Compute spread (max - min) rounded to 1 decimal place
+    spread = {
+        d: round(float(max(degree_mses[d]) - min(degree_mses[d])), 1)
+        for d in degrees
+    }
+
+    return spread
 
 # Step 4 - cv_mse (not yet solved)
 # TODO: implement
