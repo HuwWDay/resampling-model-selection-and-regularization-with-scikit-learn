@@ -362,8 +362,51 @@ def coef_norms(path):
     norms = np.linalg.norm(path, ord=2, axis=1)
     return np.round(norms, 2)
 
-# Step 11 - cv_curve (not yet solved)
-# TODO: implement
+# Step 11 - cv_curve
+import numpy as np
+from sklearn.model_selection import cross_val_score
+
+
+def cv_curve(make_model, X, y, values, cv):
+    means = []
+    ses = []
+
+    for val in values:
+        model = make_model(val)
+        scores = cross_val_score(
+            model, X, y, scoring="neg_mean_squared_error", cv=cv, n_jobs=-1
+        )
+        mse_scores = -scores
+
+        # Mean MSE across folds
+        means.append(np.mean(mse_scores))
+
+        # Standard error: sample std (ddof=1) / sqrt(n_folds)
+        n_folds = len(mse_scores)
+        se = (
+            np.std(mse_scores, ddof=1) / np.sqrt(n_folds)
+            if n_folds > 1
+            else 0.0
+        )
+        ses.append(se)
+
+    return np.round(means, 1), np.round(ses, 1)
+
+
+def choose_penalty(make_model, X, y, values, cv):
+    values = np.asarray(values)
+
+    # 1. Compute CV error curve and SEs across the penalty grid
+    means, ses = cv_curve(make_model, X, y, values, cv)
+
+    # 2. Identify the penalty corresponding to minimum CV MSE
+    best_idx = np.argmin(means)
+    val_min = values[best_idx]
+
+    # 3. Apply 1-SE rule preferring a larger penalty (stronger regularization)
+    val_1se = one_se_rule(values, means, ses, prefer="larger")
+
+    return val_min, val_1se
 
 # Step 12 - lasso_path (not yet solved)
 # TODO: implement
