@@ -154,8 +154,61 @@ def compare_with_loocv(estimator, X, y, ks, seeds):
         "kfold": cv_spread_by_k(estimator, X, y, ks, seeds),
     }
 
-# Step 6 - bootstrap_coefficients (not yet solved)
-# TODO: implement
+# Step 6 - bootstrap_coefficients
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+
+def bootstrap_coefficients(X, y, n_boot=200, random_state=0):
+    # Ensure inputs support array indexing
+    X_arr = np.asarray(X)
+    y_arr = np.asarray(y)
+
+    n, p = X_arr.shape
+    rng = np.random.default_rng(random_state)
+
+    coefs = np.empty((n_boot, p))
+    model = LinearRegression()
+
+    for b in range(n_boot):
+        # Sample n indices with replacement from [0, n)
+        idx = rng.integers(0, n, size=n)
+        model.fit(X_arr[idx], y_arr[idx])
+        coefs[b, :] = model.coef_
+
+    return coefs
+
+
+def bootstrap_se(coefs):
+    # Standard deviation across bootstrap replicates for each coefficient
+    se = np.std(coefs, axis=0, ddof=1)
+    return np.round(se, 2)
+
+
+def ols_standard_errors(X, y):
+    X_arr = np.asarray(X)
+    y_arr = np.asarray(y)
+
+    n, p = X_arr.shape
+
+    # Design matrix A includes a column of ones for the intercept
+    A = np.column_stack([np.ones(n), X_arr])
+
+    # Fit OLS to compute residuals
+    model = LinearRegression().fit(X_arr, y_arr)
+    y_pred = model.predict(X_arr)
+    residuals = y_arr - y_pred
+
+    # Degrees of freedom: n - (p + 1) for p predictors plus intercept
+    sigma2 = np.sum(residuals**2) / (n - p - 1)
+
+    # Variance-covariance matrix of coefficients: sigma^2 * (A^T A)^-1
+    cov_matrix = sigma2 * np.linalg.inv(A.T @ A)
+
+    # Standard errors are sqrt of diagonal entries; drop index 0 (intercept)
+    se = np.sqrt(np.diag(cov_matrix)[1:])
+
+    return np.round(se, 2)
 
 # Step 7 - stepwise_path (not yet solved)
 # TODO: implement
