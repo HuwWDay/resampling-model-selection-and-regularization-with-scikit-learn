@@ -408,8 +408,57 @@ def choose_penalty(make_model, X, y, values, cv):
 
     return val_min, val_1se
 
-# Step 12 - lasso_path (not yet solved)
-# TODO: implement
+# Step 12 - lasso_path
+import numpy as np
+from sklearn.linear_model import Lasso, LassoCV
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+
+def lasso_model(alpha):
+    # Pipeline that standardizes features then applies Lasso regression
+    return make_pipeline(StandardScaler(), Lasso(alpha=alpha, max_iter=20000))
+
+
+def lasso_path(X, y, alphas):
+    p = X.shape[1]
+    coef_matrix = np.empty((len(alphas), p))
+
+    for i, a in enumerate(alphas):
+        model = lasso_model(a)
+        model.fit(X, y)
+        coef_matrix[i, :] = model.named_steps["lasso"].coef_
+
+    return coef_matrix
+
+
+def nonzero_features(coef, names, tol=1e-8):
+    coef = np.asarray(coef)
+    names = np.asarray(names)
+
+    mask = np.abs(coef) > tol
+    # .tolist() casts np.str_ scalars to native Python str objects
+    return names[mask].tolist()
+
+
+def lasso_cv(X, y, cv):
+    # Standardize within pipeline before running cross-validated Lasso
+    pipe = make_pipeline(
+        StandardScaler(),
+        LassoCV(cv=cv, max_iter=20000, random_state=0, n_jobs=-1),
+    )
+    pipe.fit(X, y)
+
+    lasso_step = pipe.named_steps["lassocv"]
+    best_alpha = round(float(lasso_step.alpha_), 4)
+
+    # Feature names can be inferred from X if it's a DataFrame, otherwise fall back to string indices
+    feature_names = (
+        X.columns.tolist() if hasattr(X, "columns") else [f"x{i}" for i in range(X.shape[1])]
+    )
+    selected_features = nonzero_features(lasso_step.coef_, feature_names)
+
+    return best_alpha, selected_features
 
 # Step 13 - pcr_model (not yet solved)
 # TODO: implement
