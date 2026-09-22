@@ -460,8 +460,46 @@ def lasso_cv(X, y, cv):
 
     return best_alpha, selected_features
 
-# Step 13 - pcr_model (not yet solved)
-# TODO: implement
+# Step 13 - pcr_model
+import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+
+def pcr_model(n_components):
+    # Pipeline: Standardize -> PCA projection -> OLS Linear Regression
+    return make_pipeline(
+        StandardScaler(),
+        PCA(n_components=n_components),
+        LinearRegression(),
+    )
+
+
+def explained_variance(X):
+    # Scale features before PCA to ensure equal weighting across units
+    X_scaled = StandardScaler().fit_transform(X)
+
+    # Fit PCA with all available components
+    pca = PCA().fit(X_scaled)
+
+    # Cumulative sum of explained variance ratios as a 1D NumPy array
+    cum_var = np.cumsum(pca.explained_variance_ratio_)
+
+    return np.round(cum_var, 3)
+
+
+def pcr_curve(X, y, cv):
+    X = np.asarray(X)
+    y = np.asarray(y)
+    p = X.shape[1]
+    components = list(range(1, p + 1))
+
+    # Evaluate CV MSE curve across component counts 1 to p
+    means, ses = cv_curve(pcr_model, X, y, components, cv=cv)
+
+    return components, means, ses
 
 # Step 14 - pls_model (not yet solved)
 # TODO: implement
