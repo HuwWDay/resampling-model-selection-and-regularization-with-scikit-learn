@@ -501,8 +501,42 @@ def pcr_curve(X, y, cv):
 
     return components, means, ses
 
-# Step 14 - pls_model (not yet solved)
-# TODO: implement
+# Step 14 - pls_model
+import numpy as np
+from sklearn.cross_decomposition import PLSRegression
+
+
+def pls_model(n_components):
+    # PLSRegression centers and scales both X and y by default when scale=True
+    return PLSRegression(n_components=n_components, scale=True)
+
+
+def pls_curve(X, y, cv):
+    p = X.shape[1]
+    components = list(range(1, p + 1))
+
+    # Evaluate CV MSE curve across component counts 1 to p using cv_curve
+    means, ses = cv_curve(pls_model, X, y, components, cv=cv)
+
+    return components, means, ses
+
+
+def pls_predict(model, X):
+    # PLSRegression.predict returns a 2D array of shape (n_samples, 1); flatten to 1D
+    return model.predict(X).ravel()
+
+
+def best_components(components, means, ses):
+    components = np.asarray(components)
+
+    # 1. Component count achieving minimum CV MSE
+    best_idx = np.argmin(means)
+    comp_min = components[best_idx]
+
+    # 2. Parsimonious component count within 1 SE of minimum (preferring smaller M)
+    comp_1se = one_se_rule(components, means, ses, prefer="smaller")
+
+    return comp_min, comp_1se
 
 # Step 15 - fit_all (not yet solved)
 # TODO: implement
