@@ -538,8 +538,52 @@ def best_components(components, means, ses):
 
     return comp_min, comp_1se
 
-# Step 15 - fit_all (not yet solved)
-# TODO: implement
+# Step 15 - fit_all
+def fit_all(X, y, cv, alphas):
+    results = {}
+    p = X.shape[1]
+    all_features = (
+        X.columns.tolist() if hasattr(X, "columns") else list(range(p))
+    )
+
+    # 1. Full OLS (no penalty, all features)
+    ols = LinearRegression()
+    ols.fit(X, y)
+    results["ols"] = (ols, all_features, None)
+
+    # 2. Forward Stepwise (1-SE rule)
+    _, size_1se, forward_feats = choose_subset(X, y, direction="forward", cv=cv)
+    forward_model = LinearRegression()
+    forward_model.fit(X[forward_feats], y)
+    results["forward_1se"] = (forward_model, forward_feats, size_1se)
+
+    # 3. Ridge Regression (1-SE rule preferring larger alpha)
+    _, ridge_alpha_1se = choose_penalty(ridge_model, X, y, alphas, cv=cv)
+    ridge_final = ridge_model(ridge_alpha_1se)
+    ridge_final.fit(X, y)
+    results["ridge_1se"] = (ridge_final, all_features, ridge_alpha_1se)
+
+    # 4. Lasso with CV - fit on selected nonzero features
+    lasso_alpha, lasso_feats = lasso_cv(X, y, cv=cv)
+    lasso_final = lasso_model(lasso_alpha)
+    lasso_final.fit(X[lasso_feats], y)  # <-- Fit on X[lasso_feats]
+    results["lasso_cv"] = (lasso_final, lasso_feats, lasso_alpha)
+
+    # 5. Principal Components Regression (1-SE rule)
+    pcr_comps, pcr_means, pcr_ses = pcr_curve(X, y, cv=cv)
+    _, pcr_comp_1se = best_components(pcr_comps, pcr_means, pcr_ses)
+    pcr_final = pcr_model(pcr_comp_1se)
+    pcr_final.fit(X, y)
+    results["pcr_1se"] = (pcr_final, all_features, pcr_comp_1se)
+
+    # 6. Partial Least Squares (1-SE rule)
+    pls_comps, pls_means, pls_ses = pls_curve(X, y, cv=cv)
+    _, pls_comp_1se = best_components(pls_comps, pls_means, pls_ses)
+    pls_final = pls_model(pls_comp_1se)
+    pls_final.fit(X, y)
+    results["pls_1se"] = (pls_final, all_features, pls_comp_1se)
+
+    return results
 
 # Step 16 - test_report (not yet solved)
 # TODO: implement
