@@ -332,8 +332,35 @@ def choose_subset(X, y, direction, cv):
 
     return size_min, size_1se, features_1se
 
-# Step 10 - ridge_path (not yet solved)
-# TODO: implement
+# Step 10 - ridge_path
+import numpy as np
+from sklearn.linear_model import Ridge
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+
+def ridge_model(alpha):
+    # Pipeline that standardizes features then applies Ridge regression
+    return make_pipeline(StandardScaler(), Ridge(alpha=alpha))
+
+
+def ridge_path(X, y, alphas):
+    p = X.shape[1]
+    coef_matrix = np.empty((len(alphas), p))
+
+    for i, a in enumerate(alphas):
+        model = ridge_model(a)
+        model.fit(X, y)
+        # Extract the coefficients from the Ridge step in the pipeline
+        coef_matrix[i, :] = model.named_steps["ridge"].coef_
+
+    return coef_matrix
+
+
+def coef_norms(path):
+    # Calculate Euclidean (L2) norm across columns for each row (alpha)
+    norms = np.linalg.norm(path, ord=2, axis=1)
+    return np.round(norms, 2)
 
 # Step 11 - cv_curve (not yet solved)
 # TODO: implement
