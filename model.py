@@ -585,6 +585,48 @@ def fit_all(X, y, cv, alphas):
 
     return results
 
-# Step 16 - test_report (not yet solved)
-# TODO: implement
+# Step 16 - test_report
+import numpy as np
+from sklearn.metrics import mean_squared_error
+
+
+def test_report(models, X_test, y_test):
+    report = {}
+
+    for name, (model, feats, setting) in models.items():
+        # Predict on the subset of features the model was fitted on
+        preds = np.asarray(model.predict(X_test[feats])).ravel()
+
+        # Compute Root Mean Squared Error
+        rmse = float(np.sqrt(mean_squared_error(y_test, preds)))
+
+        report[name] = {
+            "rmse": round(rmse, 2),
+            "n_features": len(feats),
+            "setting": setting,
+        }
+
+    return report
+
+
+def best_method(report):
+    # Find the model key that minimizes RMSE
+    return min(report.keys(), key=lambda name: report[name]["rmse"])
+
+
+def format_table(report):
+    # Sort items in ascending order of RMSE
+    sorted_items = sorted(report.items(), key=lambda item: item[1]["rmse"])
+
+    lines = []
+    for name, metrics in sorted_items:
+        line = (
+            f"{name:<13}"
+            f"rmse={metrics['rmse']:>6.1f} "
+            f"features={metrics['n_features']:>2} "
+            f"setting={metrics['setting']}"
+        )
+        lines.append(line)
+
+    return lines
 
